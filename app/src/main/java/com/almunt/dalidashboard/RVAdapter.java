@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The LineageOS Project
+ * Copyright 2018 Alexandru Munteanu
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package com.almunt.dalidashboard;
 
+import android.graphics.Bitmap;
+import android.graphics.Typeface;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -40,9 +42,14 @@ public class RVAdapter extends RecyclerView.Adapter<RVAdapter.MembersViewHolder>
     @Override
     public void onBindViewHolder(MembersViewHolder personViewHolder, int i) {
         DALIMember daliMember=daliMembers.get(i);
-        personViewHolder.name.setText(daliMember.getName());
-        personViewHolder.website.setText(daliMember.getUrl());
-        personViewHolder.message.setText(daliMember.getMessage());
+        personViewHolder.name.setText("Name: "+daliMember.getName());
+        String url=daliMember.getUrl();
+        if(url.startsWith("//"))
+            personViewHolder.website.setText("Web: "+url.substring(2));
+        else
+            personViewHolder.website.setText(("Web: http://mappy.dali.dartmouth.edu/"+url));
+        personViewHolder.message.setText("\""+daliMember.getMessage()+"\"");
+        personViewHolder.message.setTypeface(personViewHolder.message.getTypeface(), Typeface.ITALIC);
     }
     @Override
     public int getItemCount()
