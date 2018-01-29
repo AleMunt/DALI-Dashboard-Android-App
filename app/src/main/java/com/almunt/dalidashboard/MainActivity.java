@@ -16,10 +16,16 @@
 
 package com.almunt.dalidashboard;
 
+import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.ResultReceiver;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -33,10 +39,39 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
+
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Type;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
+    ArrayList<String> termsOnFilters = new ArrayList<>();
+    ArrayList<String> projectFilters = new ArrayList<>();
+    ArrayList<DALIMember> daliMembers = new ArrayList<>();
     RecyclerView memberViewer;
+    LinearLayoutManager linearLayoutManager;
+    RVAdapter rvAdapter;
+    static AsyncTask asyncTask;
+    Intent intent;
+    Context context;
+    File jsonFile;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,6 +79,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        context = this;
         memberViewer = (RecyclerView) findViewById(R.id.recyclerView);
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -52,11 +88,58 @@ public class MainActivity extends AppCompatActivity {
                 launchFilterMenu();
             }
         });
+        linearLayoutManager = new LinearLayoutManager(this);
+        linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+        String text=getPreference("members.json");
+        jsonFile=new File(this.getFilesDir().getAbsolutePath()+"/members.json");
+        if(!jsonFile.exists())
+            DownloadJson();
+        else {
+            JSONDownloaded();
+        }
+        memberViewer.setLayoutManager(linearLayoutManager);
+
     }
 
+    public void DownloadJson ()
+    {
+        intent = new Intent(MainActivity.this, DownloadService.class);
+        intent.putExtra("url", "members.json");
+        intent.putExtra("receiver", new DownloadReceiver(new Handler()));
+        intent.putExtra("stop",true);
+        intent.putExtra("internalStorageDir",this.getFilesDir().getAbsolutePath());
+        startService(intent);
+    }
+    public void JSONDownloaded ()
+    {
+        Toast.makeText(this, "This is my Toast message!",
+                Toast.LENGTH_LONG).show();
+        String jsonString="";
+        try {
+            BufferedReader bufferedReader = new BufferedReader(new FileReader(jsonFile));
+
+        StringBuffer fileContents = new StringBuffer();
+        String line = bufferedReader.readLine();
+        while (line != null) {
+            fileContents.append(line);
+            line = bufferedReader.readLine();
+        }
+        bufferedReader.close();
+        jsonString=fileContents.toString();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Type listType = new TypeToken<ArrayList<DALIMember>>(){}.getType();
+        daliMembers = new Gson().fromJson(jsonString, listType);
+        rvAdapter=new RVAdapter(daliMembers);
+        memberViewer.setAdapter(rvAdapter);
+    }
     public void launchFilterMenu()
     {
-        // TODO Write Filter
+        // TODO Write Filter Menu
     }
 
     public void setPreference(String name, String key) {
@@ -117,5 +200,34 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         alert.show();
+    }
+
+    @SuppressLint("ParcelCreator")
+    private class DownloadReceiver extends ResultReceiver {
+        public DownloadReceiver(Handler handler) {
+            super(handler);
+        }
+        @Override
+        protected void onReceiveResult(int resultCode, Bundle resultData) {
+            super.onReceiveResult(resultCode, resultData);
+            if (resultCode == DownloadService.UPDATE_PROGRESS) {
+                double progress = resultData.getInt("progress");
+                String filename=resultData.getString("filename");
+                double total=resultData.getInt("total");
+                double percent=(progress/total)*100;
+
+                if(resultData.getBoolean("error",false))
+                {
+                    String error=resultData.getString("errordetails");
+                    File file=new File(context.getFilesDir()+"/temp/"+filename+".temp");
+                    file.delete();
+//                    RetryDownload(filename, error);
+                }
+                if ((int)percent == 100) {
+                    if(filename.equals("members.json"));
+                    JSONDownloaded();
+                }
+            }
+        }
     }
 }
