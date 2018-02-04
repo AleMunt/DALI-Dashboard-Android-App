@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Alexandru Munteanu
+ * Copyright 2018 Alexandru Munteanu
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -199,7 +199,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
     public boolean ArrayContainsString(ArrayList<String> strings, String searchedString) {
         for (String currentString : strings)
             if (currentString.equals(searchedString))
@@ -241,6 +240,44 @@ public class MainActivity extends AppCompatActivity {
         if (id == R.id.action_licenses) {
             LicencesDialog();
             return true;
+        }
+        else if(id == R.id.maps)
+        {
+            if(daliMembers.size()==0) {
+                ShowToast("Error: DALI Dashboard Data has not been downloaded");
+                return true;
+            }
+            String members[]=new String[daliMembers.size()];
+            double memberLocations[] = new double[daliMembers.size()*2];
+            for(int i=0;i<daliMembers.size();i++) {
+                members[i] = daliMembers.get(i).getName();
+                memberLocations[i*2]=daliMembers.get(i).getLat_long()[0];
+                memberLocations[i*2+1]=daliMembers.get(i).getLat_long()[1];
+            }
+            Intent intent = new Intent(this, MapsActivity.class);
+            intent.putExtra("members", members);
+            intent.putExtra("memberLocations", memberLocations);
+            intent.putExtra("title", "Everyone's Locations");
+            this.startActivity(intent);
+            return true;
+        }
+        else if(id==R.id.action_refresh)
+        {
+            if(daliMembers.size()==0)
+                return true;
+            for(boolean downloaded:downloadedImages)
+                if(!downloaded)
+                    return true;
+            File toBeDeletedFolder = new File(this.getFilesDir().toString());
+            if (toBeDeletedFolder.exists()) {
+                File[] files = toBeDeletedFolder.listFiles();
+                if (files != null) {
+                    for (File f : files) {
+                        f.delete();
+                    }
+                }
+            }
+            Init();
         }
         return super.onOptionsItemSelected(item);
     }
