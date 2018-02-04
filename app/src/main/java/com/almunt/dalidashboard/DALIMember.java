@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Alexandru Munteanu
+ * Copyright (C) 2018 Alexandru Munteanu
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package com.almunt.dalidashboard;
 
+import android.graphics.Bitmap;
+
 public class DALIMember {
     private String name;
     private String iconUrl;
@@ -24,6 +26,7 @@ public class DALIMember {
     private double[] lat_long;
     private String[] terms_on;
     private String[] project;
+    private Bitmap bitmap;
 
     public String getName() {
         return name;
@@ -53,31 +56,11 @@ public class DALIMember {
         return project;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public Bitmap getBitmap() {
+        return bitmap;
     }
 
-    public void setIconUrl(String iconUrl) {
-        this.iconUrl = iconUrl;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public void setLat_long(double[] lat_long) {
-        this.lat_long = lat_long;
-    }
-
-    public void setTerms_on(String[] terms_on) {
-        this.terms_on = terms_on;
-    }
-
-    public void setProject(String[] project) {
-        this.project = project;
+    public void setBitmap(Bitmap bitmap) {
+        this.bitmap = bitmap;
     }
 }

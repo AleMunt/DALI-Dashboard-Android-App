@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<!-- Copyright 2018 Alexandru Munteanu
+<!-- Copyright (C) 2018 Alexandru Munteanu
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
      You may obtain a copy of the License at
@@ -14,19 +14,20 @@
      limitations under the License.
 -->
 
-<android.support.v7.widget.CardView
+<android.support.v7.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:card_view="http://schemas.android.com/apk/res-auto"
-    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    card_view:cardCornerRadius="4dp"
-    android:foreground="?android:attr/selectableItemBackground"
+    android:layout_margin="6dp"
     android:clickable="true"
-    android:layout_margin="5dp">
+    android:foreground="?android:attr/selectableItemBackground"
+    card_view:cardCornerRadius="4dp">
+
     <LinearLayout
-        android:orientation="horizontal"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
 
         <FrameLayout
             android:layout_width="wrap_content"
@@ -42,7 +43,17 @@
                 android:baselineAlignBottom="false"
                 android:paddingHorizontal="6dp"
                 android:paddingVertical="4dp"
-                card_view:srcCompat="@drawable/ic_launcher_background" />
+                card_view:srcCompat="@drawable/dali_logo" />
+
+            <ImageView
+                android:id="@+id/imageViewFrame"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+
+                android:baselineAlignBottom="false"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="4dp"
+                card_view:srcCompat="@drawable/frame" />
 
         </FrameLayout>
 
@@ -62,7 +73,7 @@
                 android:paddingBottom="4dp"
                 android:paddingLeft="4dp"
                 android:paddingTop="4dp"
-                android:text="Joe Smith"/>
+                android:text="Joe Smith" />
 
             <TextView
                 android:id="@+id/website"
@@ -71,7 +82,7 @@
                 android:paddingBottom="4dp"
                 android:paddingLeft="4dp"
                 android:paddingTop="4dp"
-                android:text="www.example.com"/>
+                android:text="www.example.com" />
 
             <TextView
                 android:id="@+id/message"
@@ -80,7 +91,8 @@
                 android:paddingBottom="4dp"
                 android:paddingLeft="4dp"
                 android:paddingTop="4dp"
-                android:text="Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget." />
+                android:text="Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget."
+                android:textStyle="italic" />
 
         </LinearLayout>
     </LinearLayout>

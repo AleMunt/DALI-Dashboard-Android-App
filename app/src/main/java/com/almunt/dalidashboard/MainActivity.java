@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Alexandru Munteanu
+ * Copyright (C) 2018 Alexandru Munteanu
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,27 +20,25 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.os.AsyncTask;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.ResultReceiver;
-import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
-
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -50,111 +48,183 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
+import java.util.Comparator;
 
 public class MainActivity extends AppCompatActivity {
 
-    ArrayList<String> termsOnFilters = new ArrayList<>();
-    ArrayList<String> projectFilters = new ArrayList<>();
-    ArrayList<DALIMember> daliMembers = new ArrayList<>();
+    ArrayList<String> termsOnFilters;
+    boolean[] selectedFilter;
+    ArrayList<String> projectFilters;
+    String[] allFilters;
+    ArrayList<DALIMember> filteredDALIMembers;
+    ArrayList<DALIMember> daliMembers;
     RecyclerView memberViewer;
     LinearLayoutManager linearLayoutManager;
     RVAdapter rvAdapter;
-    static AsyncTask asyncTask;
     Intent intent;
     Context context;
     File jsonFile;
-
+    boolean[] downloadedImages;
+    Bitmap noImageAvailable;
+    int imageSize;
+    Bitmap frameImage;
+    DisplayMetrics displayMetrics;
+    boolean currentlyFiltered = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         context = this;
-        memberViewer = (RecyclerView) findViewById(R.id.recyclerView);
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        displayMetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        imageSize = displayMetrics.widthPixels / 3;
+        linearLayoutManager = new LinearLayoutManager(this);
+        linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+        memberViewer = findViewById(R.id.recyclerView);
+        memberViewer.setLayoutManager(linearLayoutManager);
+        FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                launchFilterMenu();
+                if(daliMembers.size()>0)
+                    launchFilterMenu();
+                else
+                    ShowToast("Error: DALI Dashboard Data has not been downloaded");
             }
         });
-        linearLayoutManager = new LinearLayoutManager(this);
-        linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
-        String text=getPreference("members.json");
-        jsonFile=new File(this.getFilesDir().getAbsolutePath()+"/members.json");
-        if(!jsonFile.exists())
-            DownloadJson();
+        Init();
+    }
+
+    public void Init()
+    {
+        termsOnFilters = new ArrayList<>();
+        projectFilters = new ArrayList<>();
+        filteredDALIMembers = new ArrayList<>();
+        daliMembers = new ArrayList<>();
+        jsonFile = new File(this.getFilesDir().getAbsolutePath() + "/members.json");
+        if (!jsonFile.exists()) {
+            ShowToast("Downloading DALI Dashboard Data...");
+            DownloadFile("members.json", -1);
+        }
         else {
             JSONDownloaded();
         }
-        memberViewer.setLayoutManager(linearLayoutManager);
-
     }
 
-    public void DownloadJson ()
-    {
+    public void CheckImages() {
+        noImageAvailable = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.dali_logo), imageSize, imageSize, false);
+        Bitmap frameImage = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.frame), imageSize, imageSize, false);
+        File currentFile;
+        for (int i = 0; i < downloadedImages.length; i++) {
+            currentFile = new File(context.getFilesDir() + "/" + daliMembers.get(i).getIconUrl().substring(7));
+            if (currentFile.exists()) {
+                downloadedImages[i] = true;
+                Bitmap currentImage = BitmapFactory.decodeFile(currentFile.getPath());
+                if (currentImage.getHeight() > currentImage.getWidth()) {
+                    currentImage = Bitmap.createBitmap(currentImage, 0, currentImage.getHeight() / 2 - currentImage.getWidth() / 2, currentImage.getWidth(), currentImage.getWidth());
+                }
+                daliMembers.get(i).setBitmap(Bitmap.createScaledBitmap(currentImage, imageSize, imageSize, false));
+            } else {
+                downloadedImages[i] = false;
+                daliMembers.get(i).setBitmap(noImageAvailable);
+            }
+        }
+
+        rvAdapter = new RVAdapter(daliMembers, frameImage, this);
+        memberViewer.setAdapter(rvAdapter);
+        for (int i = 0; i < downloadedImages.length; i++)
+            if (downloadedImages[i] == false) {
+                ShowToast("Downloading Images");
+                DownloadImage(i);
+                break;
+            }
+    }
+
+    public void DownloadImage(int imageIndex) {
+        if (downloadedImages[imageIndex] && downloadedImages.length > imageIndex + 1)
+            DownloadImage(imageIndex + 1);
+        else
+            DownloadFile(daliMembers.get(imageIndex).getIconUrl().substring(7), imageIndex);
+    }
+
+    public void DownloadFile(String url, int imageIndex) {
         intent = new Intent(MainActivity.this, DownloadService.class);
-        intent.putExtra("url", "members.json");
+        intent.putExtra("url", url);
         intent.putExtra("receiver", new DownloadReceiver(new Handler()));
-        intent.putExtra("stop",true);
-        intent.putExtra("internalStorageDir",this.getFilesDir().getAbsolutePath());
+        intent.putExtra("stop", true);
+        intent.putExtra("internalStorageDir", this.getFilesDir().getAbsolutePath());
+        intent.putExtra("imageIndex", imageIndex);
         startService(intent);
     }
-    public void JSONDownloaded ()
-    {
-        Toast.makeText(this, "This is my Toast message!",
-                Toast.LENGTH_LONG).show();
-        String jsonString="";
+
+    public void JSONDownloaded() {
+        String jsonString = "";
         try {
             BufferedReader bufferedReader = new BufferedReader(new FileReader(jsonFile));
 
-        StringBuffer fileContents = new StringBuffer();
-        String line = bufferedReader.readLine();
-        while (line != null) {
-            fileContents.append(line);
-            line = bufferedReader.readLine();
-        }
-        bufferedReader.close();
-        jsonString=fileContents.toString();
+            StringBuffer fileContents = new StringBuffer();
+            String line = bufferedReader.readLine();
+            while (line != null) {
+                fileContents.append(line);
+                line = bufferedReader.readLine();
+            }
+            bufferedReader.close();
+            jsonString = fileContents.toString();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
+        if (jsonString.endsWith("}]")) {
+            Type listType = new TypeToken<ArrayList<DALIMember>>() {
+            }.getType();
+            daliMembers = new Gson().fromJson(jsonString, listType);
+            downloadedImages = new boolean[daliMembers.size()];
+            Collections.sort(daliMembers, new Comparator<DALIMember>(){
 
-        Type listType = new TypeToken<ArrayList<DALIMember>>(){}.getType();
-        daliMembers = new Gson().fromJson(jsonString, listType);
-        rvAdapter=new RVAdapter(daliMembers);
-        memberViewer.setAdapter(rvAdapter);
-    }
-    public void launchFilterMenu()
-    {
-        // TODO Write Filter Menu
-    }
-
-    public void setPreference(String name, String key) {
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString(key, name);
-        editor.apply();
-        editor.commit();
+                @Override
+                public int compare(DALIMember member1, DALIMember member2) {
+                    return member1.getName().compareTo(member2.getName());
+                }
+            });
+            CheckImages();
+        } else {
+            jsonFile.delete();
+            RetryDownload("members.json", "There was an error downloading DALI members data.", -1);
+        }
     }
 
-    public String getPreference(String key) {
-        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-        SharedPreferences.Editor editor=settings.edit();
-        String value = settings.getString(key, "");
-        return value;
+
+    public boolean ArrayContainsString(ArrayList<String> strings, String searchedString) {
+        for (String currentString : strings)
+            if (currentString.equals(searchedString))
+                return true;
+        return false;
+    }
+
+    public void launchFilterMenu() {
+
+    }
+
+    public void RetryDownload(final String filename, String errorDetails, final int imageIndex) {
+        AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
+        alertDialog.setTitle("Download Error");
+        alertDialog.setMessage(errorDetails);
+        alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "Retry", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                if (filename.equals("members.json"))
+                    DownloadFile(filename, -1);
+                else
+                    DownloadFile(filename, imageIndex);
+            }
+        });
+        alertDialog.setCancelable(false);
+        alertDialog.show();
     }
 
     @Override
@@ -166,21 +236,21 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
         if (id == R.id.action_licenses) {
             LicencesDialog();
             return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
-    public void LicencesDialog()
+
+    public void ShowToast(String message)
     {
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+    }
+
+    public void LicencesDialog() {
         AlertDialog.Builder alert = new AlertDialog.Builder(this);
         alert.setTitle("Open Source Licenses");
         WebView webView = new WebView(this);
@@ -207,25 +277,31 @@ public class MainActivity extends AppCompatActivity {
         public DownloadReceiver(Handler handler) {
             super(handler);
         }
+
         @Override
         protected void onReceiveResult(int resultCode, Bundle resultData) {
             super.onReceiveResult(resultCode, resultData);
             if (resultCode == DownloadService.UPDATE_PROGRESS) {
-                double progress = resultData.getInt("progress");
-                String filename=resultData.getString("filename");
-                double total=resultData.getInt("total");
-                double percent=(progress/total)*100;
-
-                if(resultData.getBoolean("error",false))
-                {
-                    String error=resultData.getString("errordetails");
-                    File file=new File(context.getFilesDir()+"/temp/"+filename+".temp");
+                String filename = resultData.getString("filename");
+                int imageIndex = resultData.getInt("imageIndex", -1);
+                if (resultData.getBoolean("error")) {
+                    String error = resultData.getString("errorDetails");
+                    File file = new File(context.getFilesDir() + "/temp/" + filename + ".temp");
                     file.delete();
-//                    RetryDownload(filename, error);
-                }
-                if ((int)percent == 100) {
-                    if(filename.equals("members.json"));
-                    JSONDownloaded();
+                    RetryDownload(filename, error, imageIndex);
+                } else if (resultData.getBoolean("done")) {
+                    if (filename.equals("members.json")) {
+                        ShowToast("DALI Dashboard Data Downloaded");
+                        JSONDownloaded();
+                    }
+                    else {
+                        File image = new File(context.getFilesDir() + "/" + daliMembers.get(imageIndex).getIconUrl().substring(7));
+                        Log.d("file", String.valueOf(imageIndex));
+                        daliMembers.get(imageIndex).setBitmap(Bitmap.createScaledBitmap(BitmapFactory.decodeFile(image.getPath()), imageSize, imageSize, false));
+                        rvAdapter.notifyItemChanged(imageIndex);
+                        if (daliMembers.size() > imageIndex + 1)
+                            DownloadImage(imageIndex + 1);
+                    }
                 }
             }
         }
