@@ -19,7 +19,6 @@ package com.almunt.dalidashboard;
 import android.app.IntentService;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.ResultReceiver;
 
 import java.io.BufferedInputStream;
@@ -33,21 +32,28 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.channels.FileChannel;
 
-public class DownloadService extends IntentService
-{
-    public static final int UPDATE_PROGRESS = 2;
+public class DownloadService extends IntentService {
+    public static final int UPDATE_PROGRESS = 1;
     public String filename;
-    public boolean continueDownload=true;
+    public boolean continueDownload = true;
+    public String internalStorageDir;
+    public int imageIndex;
+    boolean error = false;
+
     public DownloadService() {
         super("DownloadService");
     }
-    public String internalStorageDir;
+
     @Override
     protected void onHandleIntent(Intent intent) {
-        String urlToDownload = "http://mappy.dali.dartmouth.edu/"+intent.getStringExtra("url");
-        filename=intent.getStringExtra("url");
-        String newfilename=filename+".temp";
-        internalStorageDir=intent.getStringExtra("internalStorageDir");
+
+        filename = intent.getStringExtra("url");
+        String newFileName = filename + ".temp";
+        internalStorageDir = intent.getStringExtra("internalStorageDir");
+        imageIndex = intent.getIntExtra("imageIndex", -1);
+        String urlToDownload = "http://mappy.dali.dartmouth.edu/" + intent.getStringExtra("url");
+        if (imageIndex > -1)
+            urlToDownload = "http://mappy.dali.dartmouth.edu/images/" + intent.getStringExtra("url");
         ResultReceiver receiver = intent.getParcelableExtra("receiver");
         try {
             URL url = new URL(urlToDownload);
@@ -56,77 +62,77 @@ public class DownloadService extends IntentService
             int fileLength = connection.getContentLength();
 
             InputStream input = new BufferedInputStream(connection.getInputStream());
-            File tempDir=new File(internalStorageDir+"/temp/");
+            File tempDir = new File(internalStorageDir + "/temp/");
             tempDir.mkdir();
-            OutputStream output = new FileOutputStream(internalStorageDir+"/temp/"+newfilename);
+            OutputStream output = new FileOutputStream(internalStorageDir + "/temp/" + newFileName);
             byte data[] = new byte[1024];
-            long total = 0;
             int count;
-            File temp =new File(internalStorageDir+"/temp/nd");
-            while ((count = input.read(data)) != -1&&continueDownload) {
-                total += count;
+            File temp = new File(internalStorageDir + "/temp/nd");
+            while ((count = input.read(data)) != -1 && continueDownload) {
                 Bundle resultData = new Bundle();
-                resultData.putInt("progress" , (int) total);
-                resultData.putInt("total" , fileLength);
-                resultData.putString("filename" , filename);
-                resultData.putBoolean("error",false);
+                resultData.putInt("imageIndex", imageIndex);
+                resultData.putString("filename", filename);
+                resultData.putBoolean("error", false);
+                resultData.putBoolean("done", false);
                 receiver.send(UPDATE_PROGRESS, resultData);
                 output.write(data, 0, count);
-                if(temp.exists())
-                {
-                    continueDownload=false;
+                if (temp.exists()) {
+                    continueDownload = false;
                     temp.delete();
                 }
             }
             output.flush();
             output.close();
             input.close();
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
+            ClearTemp();
             System.out.println(e.getMessage());
             Bundle resultData = new Bundle();
-            resultData.putInt("progress" , 0);
-            resultData.putInt("total" , 1);
-            resultData.putString("filename" , filename);
+            resultData.putString("filename", filename);
             resultData.putBoolean("error", true);
-            resultData.putString("errordetails",e.getMessage());
+            resultData.putInt("imageIndex", imageIndex);
+            resultData.putBoolean("done", false);
+            resultData.putString("errorDetails", e.getMessage());
             receiver.send(UPDATE_PROGRESS, resultData);
+            error = true;
         }
-        String dir = internalStorageDir + "/";
-        // copy downloaded file if download is successful
-        if(this.continueDownload)
-        {
-            try
-            {
-                if(new File(internalStorageDir + "/temp/" + newfilename).length()>5)
-                    copy(new File(internalStorageDir + "/temp/" + newfilename), new File(internalStorageDir + "/" + filename));
-
-            } catch (IOException e)
-            {
+        if (error)
+            return;
+        if (this.continueDownload) {
+            try {
+                if (new File(internalStorageDir + "/temp/" + newFileName).length() > 5)
+                    copy(new File(internalStorageDir + "/temp/" + newFileName), new File(internalStorageDir + "/" + filename));
+            } catch (IOException e) {
                 e.printStackTrace();
             }
             Bundle resultData = new Bundle();
-            resultData.putInt("progress", 100);
+            resultData.putBoolean("done", true);
+            resultData.putBoolean("error", false);
+            resultData.putString("filename", filename);
+            resultData.putInt("imageIndex", imageIndex);
             receiver.send(UPDATE_PROGRESS, resultData);
+            ClearTemp();
         }
-        File deletefolder = new File(dir + "/temp");
-        if (deletefolder.exists())
-        {
-            File[] contents = deletefolder.listFiles();
-            if (contents != null)
-            {
-                for (File f : contents)
-                {
+
+    }
+
+    public void ClearTemp() {
+        String dir = internalStorageDir + "/";
+        File toBedeletedFolder = new File(dir + "/temp");
+        if (toBedeletedFolder.exists()) {
+            File[] contents = toBedeletedFolder.listFiles();
+            if (contents != null) {
+                for (File f : contents) {
                     f.delete();
                 }
             }
         }
-        deletefolder.delete();
+        toBedeletedFolder.delete();
     }
-    public void copy(File src, File dst) throws IOException {
-        FileInputStream inStream = new FileInputStream(src);
-        FileOutputStream outStream = new FileOutputStream(dst);
+
+    public void copy(File sourceFile, File destinationFile) throws IOException {
+        FileInputStream inStream = new FileInputStream(sourceFile);
+        FileOutputStream outStream = new FileOutputStream(destinationFile);
         FileChannel inChannel = inStream.getChannel();
         FileChannel outChannel = outStream.getChannel();
         inChannel.transferTo(0, inChannel.size(), outChannel);
