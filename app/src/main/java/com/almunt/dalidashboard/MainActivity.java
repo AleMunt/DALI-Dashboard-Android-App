@@ -192,11 +192,34 @@ public class MainActivity extends AppCompatActivity {
                     return member1.getName().compareTo(member2.getName());
                 }
             });
+            CreateFilters();
             CheckImages();
         } else {
             jsonFile.delete();
             RetryDownload("members.json", "There was an error downloading DALI members data.", -1);
         }
+    }
+
+    public void CreateFilters() {
+        for (DALIMember daliMember : daliMembers)
+            if (daliMember.getTerms_on().length > 0) {
+                for (int j = 0; j < daliMember.getTerms_on().length; j++)
+                    if (!ArrayContainsString(termsOnFilters, daliMember.getTerms_on()[j]))
+                        termsOnFilters.add(daliMember.getTerms_on()[j]);
+
+                for (int j = 0; j < daliMember.getProject().length; j++)
+                    if (!ArrayContainsString(projectFilters, daliMember.getProject()[j]))
+                        if (daliMember.getProject()[j].trim().length() > 0)
+                            projectFilters.add(daliMember.getProject()[j]);
+            }
+        allFilters = new String[termsOnFilters.size() + projectFilters.size()];
+        for (int i = 0; i < termsOnFilters.size(); i++)
+            allFilters[i] = termsOnFilters.get(i)+" (Term)";
+        for (int i = 0; i < projectFilters.size(); i++)
+            allFilters[termsOnFilters.size() + i] = projectFilters.get(i)+" (Project)";
+        selectedFilter = new boolean[allFilters.length];
+        for (boolean selected : selectedFilter)
+            selected = false;
     }
 
     public boolean ArrayContainsString(ArrayList<String> strings, String searchedString) {
@@ -207,7 +230,72 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void launchFilterMenu() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Filter")
+                .setMultiChoiceItems(allFilters, selectedFilter, new DialogInterface.OnMultiChoiceClickListener() {
+                    public void onClick(DialogInterface dialogInterface, int item, boolean b) {
 
+                    }
+                })
+                .setPositiveButton("Okay", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        boolean allFalse = true;
+                        boolean allTrue = true;
+                        for(boolean bool: selectedFilter)
+                        {
+                            if(bool)
+                                allFalse=false;
+                            else
+                                allTrue=false;
+                        }
+                        if(allFalse || allTrue) {
+                            rvAdapter = new RVAdapter(daliMembers, frameImage, context);
+                            memberViewer.setAdapter(rvAdapter);
+                            currentlyFiltered = false;
+                            return;
+                        }
+                        filteredDALIMembers = new ArrayList<>();
+                        for(DALIMember member:daliMembers)
+                        {
+                            Boolean missingAFilter = false;
+                            for(int i=0;i<termsOnFilters.size();i++)
+                            {
+                                boolean hasFilter = true;
+                                if(selectedFilter[i]==true) {
+                                    hasFilter = false;
+                                    for (String term:member.getTerms_on())
+                                        if(termsOnFilters.get(i).equals(term))
+                                            hasFilter = true;
+                                }
+                                if(!hasFilter)
+                                    missingAFilter = true;
+                            }
+                            for(int i=0;i<projectFilters.size();i++)
+                            {
+                                boolean hasFilter = true;
+                                if(selectedFilter[termsOnFilters.size()+i]==true) {
+                                    hasFilter = false;
+                                    for (String project:member.getProject())
+                                        if(projectFilters.get(i).equals(project))
+                                            hasFilter = true;
+                                }
+                                if(!hasFilter)
+                                    missingAFilter = true;
+                            }
+                            if(!missingAFilter)
+                                filteredDALIMembers.add(member);
+                        }
+                        rvAdapter = new RVAdapter(filteredDALIMembers, frameImage, context);
+                        memberViewer.setAdapter(rvAdapter);
+                        currentlyFiltered = true;
+                    }
+                })
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                    }
+                });
+
+        builder.create().show();
     }
 
     public void RetryDownload(final String filename, String errorDetails, final int imageIndex) {
