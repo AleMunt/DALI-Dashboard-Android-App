@@ -31,17 +31,32 @@ import com.google.gson.Gson;
 
 import java.util.List;
 
+/**
+ * A RecyclerView adapter that runs all of the individual CardViews in a RecyclerView
+ */
 public class RVAdapter extends RecyclerView.Adapter<RVAdapter.MembersViewHolder> {
     List<DALIMember> daliMembers;
     Bitmap frameImage;
     Context context;
 
+    /**
+     * The constructor for the RVAdapter
+     * @param daliMembers A list of DALI members
+     * @param frameImage The frame image that is used for all DALI members
+     * @param context The context of the MainActivity which is used to an intent for the Member Activity
+     */
     RVAdapter(List<DALIMember> daliMembers, Bitmap frameImage, Context context) {
         this.daliMembers = daliMembers;
         this.frameImage = frameImage;
         this.context = context;
     }
 
+    /**
+     * Establishes the layout for the CardView
+     * @param viewGroup The group holding the CardViews
+     * @param i
+     * @return
+     */
     @Override
     public MembersViewHolder onCreateViewHolder(ViewGroup viewGroup, int i) {
         View v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.cardview, viewGroup, false);
@@ -49,6 +64,11 @@ public class RVAdapter extends RecyclerView.Adapter<RVAdapter.MembersViewHolder>
         return membersViewHolder;
     }
 
+    /**
+     *
+     * @param personViewHolder The ViewHolder with the current CardView
+     * @param i The position of the CardView
+     */
     @Override
     public void onBindViewHolder(MembersViewHolder personViewHolder, int i) {
         final DALIMember daliMember = daliMembers.get(i);
@@ -61,6 +81,9 @@ public class RVAdapter extends RecyclerView.Adapter<RVAdapter.MembersViewHolder>
         personViewHolder.message.setText("\"" + daliMember.getMessage() + "\"");
         personViewHolder.icon.setImageBitmap(daliMembers.get(i).getBitmap());
         personViewHolder.frame.setImageBitmap(frameImage);
+
+        // When the CardView of a DALI Member is clicked member data is sent to a Member Activity
+        // and shown.
         personViewHolder.cardView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -74,6 +97,10 @@ public class RVAdapter extends RecyclerView.Adapter<RVAdapter.MembersViewHolder>
         });
     }
 
+    /**
+     *
+     * @return The number of DALI Members in the RecyclerView
+     */
     @Override
     public int getItemCount() {
         return daliMembers.size();
@@ -84,6 +111,9 @@ public class RVAdapter extends RecyclerView.Adapter<RVAdapter.MembersViewHolder>
         super.onAttachedToRecyclerView(recyclerView);
     }
 
+    /**
+     * Establishes the variable names of parts of the cardview.xml layout
+     */
     public static class MembersViewHolder extends RecyclerView.ViewHolder {
         TextView name;
         TextView website;

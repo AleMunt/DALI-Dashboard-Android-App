@@ -36,6 +36,9 @@ import com.google.gson.Gson;
 import java.io.File;
 import java.util.Arrays;
 
+/**
+ * An activity for displaying information about DALI Members
+ */
 public class MemberActivity extends AppCompatActivity {
 
     DALIMember daliMember;
@@ -50,13 +53,20 @@ public class MemberActivity extends AppCompatActivity {
     TextView locationTextView;
     TextView termsOnTextView;
     TextView projectsTextView;
-    LinearLayout websiteLayout;
-    LinearLayout locationLayout;
     String url;
+
+    /**
+     * Use a Chrome Custom Tab for a more seamless and faster transition to website
+     */
     CustomTabsIntent customTabsIntent;
     CustomTabsIntent.Builder builder;
+
     Context context;
 
+    /**
+     * Grab all data from the intent and displays it in the Member Activity UI
+     * @param savedInstanceState
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -86,24 +96,31 @@ public class MemberActivity extends AppCompatActivity {
         if (projectsText.trim().isEmpty())
             projectsText = "None";
         projectsTextView.setText(projectsText);
-        websiteLayout = findViewById(R.id.website_layout);
         builder = new CustomTabsIntent.Builder();
         builder.setToolbarColor(getResources().getColor(R.color.colorPrimary));
         customTabsIntent = builder.build();
-        locationLayout = findViewById(R.id.location_layout);
         context = this;
     }
 
+    /**
+     * Get the DALI Member's image from the image filename and display it with a frame that has rounded corners
+     */
     public void GetMemberImage() {
         frameImage = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.frame), imageSize, imageSize, false);
+
+        // 7 is the size of "images/" string. 7 is hardcoded for performance.
         File imageFile = new File(this.getFilesDir() + "/" + daliMember.getIconUrl().substring(7));
         if (imageFile.exists()) {
             Bitmap currentImage = BitmapFactory.decodeFile(imageFile.getPath());
+
+            // Crop the image into a square if its height is greater than its width
             if (currentImage.getHeight() > currentImage.getWidth()) {
                 currentImage = Bitmap.createBitmap(currentImage, 0, currentImage.getHeight() / 2 - currentImage.getWidth() / 2, currentImage.getWidth(), currentImage.getWidth());
             }
             memberImage = Bitmap.createScaledBitmap(currentImage, imageSize, imageSize, false);
         } else {
+
+            // Show the DALI logo if the app has not downloaded an image yet
             memberImage = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.dali_logo), imageSize, imageSize, false);
         }
         imageView = findViewById(R.id.imageView);
@@ -112,16 +129,24 @@ public class MemberActivity extends AppCompatActivity {
         imageFrameView.setImageBitmap(frameImage);
     }
 
+    /**
+     * Starts the link to open a Chrome Custom Tab
+     * @param view
+     */
     public void OpenWebsite(View view) {
         customTabsIntent.launchUrl(context, Uri.parse("http://" + url));
     }
 
+    /**
+     * Starts a Map Activity displaying one DALI Member
+     * @param view
+     */
     public void OpenMap(View view) {
         Intent intent = new Intent(this, MapsActivity.class);
-        intent.putExtra("members", new String[]{daliMember.getName()});
+        intent.putExtra("memberNames", new String[]{daliMember.getName()});
         intent.putExtra("memberLocations", daliMember.getLat_long());
         intent.putExtra("title", daliMember.getName() + "'s Location");
-        intent.putExtra("center", 0);
+        intent.putExtra("center", true);
         this.startActivity(intent);
     }
 }

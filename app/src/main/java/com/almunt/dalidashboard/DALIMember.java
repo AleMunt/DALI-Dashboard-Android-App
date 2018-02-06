@@ -18,6 +18,10 @@ package com.almunt.dalidashboard;
 
 import android.graphics.Bitmap;
 
+/**
+ * This is a java class representing on object from DALI Lab's URL
+ * It has to be in sync with changes in the members.json file contents.
+ */
 public class DALIMember {
     private String name;
     private String iconUrl;

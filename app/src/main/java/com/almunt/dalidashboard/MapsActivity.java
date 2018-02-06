@@ -27,20 +27,39 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+
+/**
+ * An Activity for displaying a Google Map with markers
+ */
 public class MapsActivity extends AppCompatActivity
         implements OnMapReadyCallback {
 
-    String[] members;
+    /**
+     * The names and locations of the DALI memberNames
+     */
+    String[] memberNames;
     double[] memberLocations;
-    int center;
+    /**
+     * Is true if there should be a corrected center on the map
+     */
+    boolean center;
 
+    /**
+     * Starts the activity and retrieves a list of memberNames, their locations and if the map
+     * should be centered.
+     *
+     * Also gives the activity a title in the toolbar
+     * @param savedInstanceState
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        members = getIntent().getStringArrayExtra("members");
+
+        //Obtains DALI members names and locations from the intent
+        memberNames = getIntent().getStringArrayExtra("memberNames");
         memberLocations = getIntent().getDoubleArrayExtra("memberLocations");
-        center = getIntent().getIntExtra("center", -1);
+        center = getIntent().getBooleanExtra("center", false);
         Toolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setTitle(getIntent().getStringExtra("title"));
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -48,11 +67,30 @@ public class MapsActivity extends AppCompatActivity
         mapFragment.getMapAsync(this);
     }
 
+
+    /**
+     *  Sets up the googleMap object with markers once it is ready
+     * @param googleMap
+     */
     @Override
-    public void onMapReady(GoogleMap googleMap) {
-        for (int i = 0; i < members.length; i++)
-            googleMap.addMarker(new MarkerOptions().position(new LatLng(memberLocations[i * 2], memberLocations[i * 2 + 1])).title(members[i]));
-        if (center >= 0)
-            googleMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(memberLocations[center * 2], memberLocations[center * 2 + 1])));
+    public void onMapReady(GoogleMap googleMap)
+    {
+        /**
+         *  Add the latitudes and longitudes of everybody to the map.
+         *  Move in twos in member locations as there is latitude and a longitude
+         */
+        for (int i = 0; i < memberNames.length; i++) {
+            LatLng memberLatLng=new LatLng(memberLocations[i * 2], memberLocations[i * 2 + 1]);
+            MarkerOptions memberMarker= new MarkerOptions().position(memberLatLng).title(memberNames[i]);
+            googleMap.addMarker(memberMarker);
+        }
+        /**
+         *  If there is a center then move map camera to the center.
+         *  This also means that there is only one marker on the map.
+         */
+        if (center) {
+            LatLng memberLatLng=new LatLng(memberLocations[0], memberLocations[1]);
+            googleMap.moveCamera(CameraUpdateFactory.newLatLng(memberLatLng));
+        }
     }
 }
