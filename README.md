@@ -3,7 +3,7 @@
 # DALI Dashboard Android App
 A DALI Dashboard for the DALI LAB Challenge Level 2
 
-A compiled version of the app in a an apk file can be downloaded [here](https://github.com/AleMunt/DALI-Dashboard-Android-App/raw/master/app/release/app-debug.apk).
+A compiled version of the app in a an apk file can be downloaded [here](https://github.com/AleMunt/DALI-Dashboard-Android-App/raw/master/app/release/app-release.apk).
 
 # How to build
 **Requirements:**
