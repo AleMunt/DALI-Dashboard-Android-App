@@ -32,7 +32,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -140,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
         noImageAvailable = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.dali_logo), imageSize, imageSize, false);
 
         // Create a frame Bitmap with rounded corners to give the DALI member image rounded corners.
-        Bitmap frameImage = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.frame), imageSize, imageSize, false);
+        frameImage = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.frame), imageSize, imageSize, false);
         File currentFile;
         for (int i = 0; i < downloadedImages.length; i++) {
 
@@ -291,7 +290,7 @@ public class MainActivity extends AppCompatActivity {
      *
      * @param strings List of strings that are being searched through
      * @param searchedString String that is being searched for
-     * @return
+     * @return Returns If a string array contains a string
      */
     public boolean ArrayContainsString(ArrayList<String> strings, String searchedString) {
         for (String currentString : strings)
@@ -359,6 +358,8 @@ public class MainActivity extends AppCompatActivity {
                         // Set up RecyclerView with filtered DALI members
                         rvAdapter = new RVAdapter(filteredDALIMembers, frameImage, context);
                         memberViewer.setAdapter(rvAdapter);
+                        if(filteredDALIMembers.size()==0)
+                            ShowToast("No DALI Members were found with the selected filters.");
                     }
                 })
                 .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
