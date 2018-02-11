@@ -24,6 +24,7 @@ import android.os.ResultReceiver;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -53,6 +54,7 @@ public class DownloadService extends IntentService {
 
     /**
      * Handles an incoming intent with download details
+     *
      * @param intent The intent containing all download details
      */
     @Override
@@ -101,14 +103,11 @@ public class DownloadService extends IntentService {
         }
         if (error)
             return;
+
         // If the download completes then remove file from temporary folder, clear temporary folder,
         // and send completed download details to the Download Receiver
         if (this.continueDownload) {
-            try {
-                copy(new File(internalStorageDir + "/temp/" + newFileName), new File(internalStorageDir + "/" + filename));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            CopyFile(new File(internalStorageDir + "/temp/" + newFileName), new File(internalStorageDir + "/" + filename));
             Bundle resultData = new Bundle();
             resultData.putBoolean("done", true);
             resultData.putBoolean("error", false);
@@ -139,17 +138,23 @@ public class DownloadService extends IntentService {
 
     /**
      * Copies a file
-     * @param sourceFile The source file that it copied
+     * @param sourceFile      The source file that it being copied
      * @param destinationFile The copied file destination
      * @throws IOException
      */
-    public void copy(File sourceFile, File destinationFile) throws IOException {
-        FileInputStream inStream = new FileInputStream(sourceFile);
-        FileOutputStream outStream = new FileOutputStream(destinationFile);
-        FileChannel inChannel = inStream.getChannel();
-        FileChannel outChannel = outStream.getChannel();
-        inChannel.transferTo(0, inChannel.size(), outChannel);
-        inStream.close();
-        outStream.close();
+    public void CopyFile(File sourceFile, File destinationFile) {
+        try {
+            FileInputStream inStream = new FileInputStream(sourceFile);
+            FileOutputStream outStream = new FileOutputStream(destinationFile);
+            FileChannel inChannel = inStream.getChannel();
+            FileChannel outChannel = outStream.getChannel();
+            inChannel.transferTo(0, inChannel.size(), outChannel);
+            inStream.close();
+            outStream.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
